@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -9,10 +10,13 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(bodyParser.json());
 
-mongoose.connect('mongodb://localhost:27017/todoapp', {
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-});
+})
+.then(() => console.log('Connected to MongoDB'))
+.catch(err => console.error('MongoDB connection error:', err));
 
 const TaskSchema = new mongoose.Schema({
   content: String,
@@ -23,6 +27,7 @@ const TaskSchema = new mongoose.Schema({
 
 const Task = mongoose.model('Task', TaskSchema);
 
+// API routes
 app.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await Task.find();
@@ -49,6 +54,15 @@ app.put('/api/tasks/:id', async (req, res) => {
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
+});
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'client/build')));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
 });
 
 app.listen(PORT, () => {
